@@ -198,16 +198,35 @@ export class Matchmaker extends DurableObject {
     let ticketB;
 
     try {
-      [ticketA, ticketB] = await Promise.all([
-        createRoomTicket(
-          { roomId, slot: "a", exp },
-          this.env.ROOM_TICKET_SECRET
-        ),
-        createRoomTicket(
-          { roomId, slot: "b", exp },
-          this.env.ROOM_TICKET_SECRET
-        ),
-      ]);
+      
+[ticketA, ticketB] = await Promise.all([
+  createRoomTicket(
+    {
+      roomId,
+      slot: "a",
+      exp,
+      profile: {
+        preferredName: profile.preferredName,
+        interests: profile.interests,
+      },
+    },
+    this.env.ROOM_TICKET_SECRET
+  ),
+
+  createRoomTicket(
+    {
+      roomId,
+      slot: "b",
+      exp,
+      profile: {
+        preferredName: peerProfile.preferredName,
+        interests: peerProfile.interests,
+      },
+    },
+    this.env.ROOM_TICKET_SECRET
+  ),
+]);
+
     } catch {
       this.restoreToWaiting(ws, roomId);
       this.restoreToWaiting(peer, roomId);
@@ -275,8 +294,9 @@ export class Matchmaker extends DurableObject {
         interests: profile.interests,
       },
     });
+    ws.close(1000, "Match found");
+peer.close(1000, "Match found");
   }
-
   countWaiting() {
     return this.ctx
       .getWebSockets()
