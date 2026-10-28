@@ -1,0 +1,17 @@
+
+{
+  "name": "swiftchat",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/web",
+    "apps/worker"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=@swiftchat/web",
+    "dev:web": "npm run dev --workspace=@swiftchat/web",
+    "dev:worker": "npm run dev --workspace=@swiftchat/worker",
+    "build": "npm run build --workspace=@swiftchat/web"
+  }
+}
