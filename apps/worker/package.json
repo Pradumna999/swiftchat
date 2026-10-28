@@ -1,5 +1,5 @@
 {
-  "name": "@anonymous-chat/worker",
+  "name": "@swiftchat/worker",
   "version": "0.1.0",
   "private": true,
   "type": "module",
