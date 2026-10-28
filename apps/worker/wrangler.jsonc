@@ -5,9 +5,11 @@
   "main": "src/index.js",
   "compatibility_date": "2026-10-28",
   "workers_dev": true,
+
   "vars": {
-    "ALLOWED_ORIGINS": "http://localhost:5173,http://127.0.0.1:5173"
+    "ALLOWED_ORIGINS": "http://localhost:5173,http://127.0.0.1:5173,https://swiftchat-worker.swiftchat.workers.dev"
   },
+
   "durable_objects": {
     "bindings": [
       {
@@ -20,6 +22,7 @@
       }
     ]
   },
+
   "migrations": [
     {
       "tag": "v1",
@@ -29,5 +32,15 @@
       "tag": "v2",
       "new_sqlite_classes": ["ChatRoom"]
     }
-  ]
+  ],
+
+  "assets": {
+    "directory": "../web/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/api/*",
+      "/ws/*"
+    ]
+  }
 }
