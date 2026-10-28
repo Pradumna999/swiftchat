@@ -1,10 +1,13 @@
-
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "swiftchat-worker",
   "main": "src/index.js",
   "compatibility_date": "2026-10-28",
   "workers_dev": true,
+
+  "secrets": {
+    "required": ["ROOM_TICKET_SECRET"]
+  },
 
   "vars": {
     "ALLOWED_ORIGINS": "http://localhost:5173,http://127.0.0.1:5173,https://swiftchat-worker.swiftchat.workers.dev"

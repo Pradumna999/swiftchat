@@ -2,23 +2,72 @@ import { useState } from "react";
 
 import JoinForm from "./components/JoinForm.jsx";
 import SafetyNotice from "./components/SafetyNotice.jsx";
+import QueueStatus from "./components/QueueStatus.jsx";
+import ChatHeader from "./components/ChatHeader.jsx";
+import ConnectionStatus from "./components/ConnectionStatus.jsx";
+import MessageList from "./components/MessageList.jsx";
+import MessageComposer from "./components/MessageComposer.jsx";
+import EndChatButton from "./components/EndChatButton.jsx";
+
+import { useMatchmaking } from "./features/matchmaking/useMatchmaking.js";
+import { useChatSocket } from "./features/chat/useChatSocket.js";
+
+import "./styles/chat.css";
 
 export default function App() {
-  const [submittedProfile, setSubmittedProfile] = useState(null);
+  const [profile, setProfile] = useState(null);
+
+  const {
+    status: matchStatus,
+    match,
+    error: matchError,
+    startMatching,
+    cancelMatching,
+    resetSession,
+  } = useMatchmaking();
+
+  const {
+    status: chatStatus,
+    peer,
+    messages,
+    notice,
+    sendMessage,
+    endChat,
+  } = useChatSocket(match, profile?.preferredName);
+
+  function handleStart(preferences) {
+    setProfile(preferences);
+    startMatching(preferences);
+  }
+
+  function handleReset() {
+    resetSession();
+    setProfile(null);
+  }
+
+  const isSearching = ["connecting", "waiting"].includes(matchStatus);
+
+  const isActiveChat =
+    matchStatus === "matched" &&
+    ["idle", "connecting", "waiting", "connected", "ending"].includes(
+      chatStatus
+    );
+
+  const isFinishedChat =
+    matchStatus === "matched" &&
+    ["ended", "error"].includes(chatStatus);
 
   return (
     <main className="app-shell">
       <nav className="topbar" aria-label="Main navigation">
-        <a className="brand" href="/" aria-label="Offscript home">
+        <a className="brand" href="/" aria-label="SwiftChat home">
           <span className="brand-mark" aria-hidden="true">
-            o.
+            s.
           </span>
-          <span>offscript</span>
+          <span>swiftchat</span>
         </a>
 
-        <span className="topbar-note">
-          Anonymous by design
-        </span>
+        <span className="topbar-note">Anonymous by design</span>
       </nav>
 
       <section className="hero">
@@ -36,8 +85,7 @@ export default function App() {
 
           <p className="hero-description">
             Meet someone new, find common ground, or simply talk
-            about something unexpected. No account, no social
-            pressure.
+            about something unexpected. No account, no social pressure.
           </p>
 
           <div className="feature-list">
@@ -67,68 +115,110 @@ export default function App() {
           </div>
 
           <p className="demo-note">
-            Preview build · Live matching is not connected yet
+            Live text chat · No user accounts
           </p>
         </div>
 
         <section className="join-card" aria-labelledby="join-title">
-          <div className="card-heading">
-            <p className="card-eyebrow">YOUR NEXT CONVERSATION</p>
-            <h2 id="join-title">Who should you meet?</h2>
-            <p>Set your preferences before entering the queue.</p>
-          </div>
-
-          <JoinForm onStart={setSubmittedProfile} />
-
-          {submittedProfile && (
-            <section className="preview-result" role="status">
-              <div className="result-heading">
-                <span className="result-check" aria-hidden="true">
-                  ✓
-                </span>
-
-                <div>
-                  <h3>Preferences validated</h3>
-                  <p>
-                    Hey, {submittedProfile.preferredName}!
-                    Your form is ready.
-                  </p>
-                </div>
-              </div>
-
-              <dl className="profile-summary">
-                <div>
-                  <dt>Matching mode</dt>
-                  <dd>
-                    {submittedProfile.mode === "random"
-                      ? "Random chat"
-                      : "Shared interests"}
-                  </dd>
-                </div>
-
-                <div>
-                  <dt>Interests</dt>
-                  <dd>
-                    {submittedProfile.interests.length > 0
-                      ? submittedProfile.interests.join(", ")
-                      : "None selected"}
-                  </dd>
-                </div>
-              </dl>
-
-              <p className="preview-message">
-                This is a local preview only. No partner has been
-                matched, and no data has been sent to a backend.
-              </p>
-            </section>
+          {isSearching && (
+            <QueueStatus
+              status={matchStatus}
+              error={matchError}
+              onCancel={cancelMatching}
+            />
           )}
 
-          <SafetyNotice />
+          {(matchStatus === "idle" || matchStatus === "error") && (
+            <>
+              <div className="card-heading">
+                <p className="card-eyebrow">YOUR NEXT CONVERSATION</p>
+                <h2 id="join-title">Who should you meet?</h2>
+                <p>
+                  Set your preferences before entering the queue.
+                </p>
+              </div>
+
+              {matchError && (
+                <p className="app-error" role="alert">
+                  {matchError}
+                </p>
+              )}
+
+              <JoinForm onStart={handleStart} />
+              <SafetyNotice />
+            </>
+          )}
+
+          {isActiveChat && (
+            <div className="chat-panel">
+              <ChatHeader peer={peer ?? match?.peer} />
+
+              <ConnectionStatus status={chatStatus} />
+
+              {notice && (
+                <p className="chat-notice" role="status">
+                  {notice}
+                </p>
+              )}
+
+              <MessageList
+                messages={messages}
+                ownName={profile?.preferredName}
+              />
+
+              <MessageComposer
+                onSend={sendMessage}
+                disabled={chatStatus !== "connected"}
+              />
+
+              <div className="chat-actions">
+                <span className="ephemeral-note">
+                  Messages are held in memory for this session.
+                </span>
+
+                <EndChatButton
+                  onClick={endChat}
+                  disabled={
+                    ["ending", "ended", "error"].includes(chatStatus)
+                  }
+                />
+              </div>
+            </div>
+          )}
+
+          {isFinishedChat && (
+            <div className="ended-panel" aria-live="polite">
+              <div className="ended-icon" aria-hidden="true">
+                ✓
+              </div>
+
+              <p className="card-eyebrow">SESSION CLOSED</p>
+
+              <h2>
+                {chatStatus === "error"
+                  ? "Connection interrupted"
+                  : "Conversation ended"}
+              </h2>
+
+              <p>
+                {notice ||
+                  "Your live message list has been cleared. You can start a fresh conversation."}
+              </p>
+
+              <button
+                className="start-button"
+                type="button"
+                onClick={handleReset}
+              >
+                Find someone else <span aria-hidden="true">↗</span>
+              </button>
+            </div>
+          )}
         </section>
       </section>
 
       <footer className="site-footer">
-        <span>offscript · early build</span>
+        <span>swiftchat · live text chat</span>
         <span>Talk freely. Protect your identity.</span>
       </footer>
     </main>
