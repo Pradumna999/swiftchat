@@ -1,7 +1,7 @@
 
 import { DurableObject } from "cloudflare:workers";
 import { verifyRoomTicket } from "../lib/ticket-auth.js";
-
+import { consumeRateLimit } from "../lib/rate-limit.js";
 const OPEN = 1;
 const CHAT_PROTOCOL = "swiftchat.v1";
 
@@ -154,31 +154,27 @@ export class ChatRoom extends DurableObject {
     );
   }
 
-  allowMessage(ws) {
-    const state = getAttachment(ws);
-    const now = Date.now();
+  allowFrame(ws) {
+  const result = consumeRateLimit(getAttachment(ws), {
+    name: "frame",
+    windowMs: 5000,
+    maxEvents: 60,
+  });
 
-    let windowStart = state.rateWindowStart;
-    let messageCount = state.messageCount;
+  ws.serializeAttachment(result.state);
+  return result.allowed;
+}
 
-    if (
-      !Number.isFinite(windowStart) ||
-      now - windowStart >= 5000
-    ) {
-      windowStart = now;
-      messageCount = 0;
-    }
+allowMessage(ws) {
+  const result = consumeRateLimit(getAttachment(ws), {
+    name: "message",
+    windowMs: 5000,
+    maxEvents: 15,
+  });
 
-    messageCount += 1;
-
-    ws.serializeAttachment({
-      ...state,
-      rateWindowStart: windowStart,
-      messageCount,
-    });
-
-    return messageCount <= 15;
-  }
+  ws.serializeAttachment(result.state);
+  return result.allowed;
+}
 
   webSocketMessage(ws, rawMessage) {
     const state = getAttachment(ws);

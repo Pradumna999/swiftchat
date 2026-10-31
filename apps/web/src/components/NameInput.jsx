@@ -2,7 +2,7 @@ export default function NameInput({ value, onChange, error }) {
   return (
     <div className="field-group">
       <label className="field-label" htmlFor="preferred-name">
-        Your preferred name
+        Name yourself mate
       </label>
 
       <input

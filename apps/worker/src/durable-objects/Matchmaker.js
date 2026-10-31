@@ -1,11 +1,14 @@
 
 import { DurableObject } from "cloudflare:workers";
-
+import { consumeRateLimit } from "../lib/rate-limit.js";
 import { selectCandidate } from "../lib/matching.js";
 import { validateJoinPayload } from "../lib/validation.js";
 import { createRoomTicket } from "../lib/ticket-auth.js";
 
 const OPEN = 1;
+// Initial capacity safeguard for the single matchmaking Durable Object.
+// Raise only after load testing.
+const MAX_ACTIVE_MATCHMAKER_CONNECTIONS = 500;
 
 function sendEvent(ws, type, payload = {}) {
   if (ws.readyState !== OPEN) {
@@ -34,7 +37,20 @@ export class Matchmaker extends DurableObject {
         status: 426,
       });
     }
+const activeConnections = this.ctx
+  .getWebSockets()
+  .filter((socket) => socket.readyState === OPEN)
+  .length;
 
+if (activeConnections >= MAX_ACTIVE_MATCHMAKER_CONNECTIONS) {
+  return new Response("Matchmaking is busy. Try again shortly.", {
+    status: 503,
+    headers: {
+      "Retry-After": "5",
+      "Cache-Control": "no-store",
+    },
+  });
+}
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
 

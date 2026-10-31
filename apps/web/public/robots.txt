@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://swiftchat-worker.swiftchat.workers.dev/sitemap.xml

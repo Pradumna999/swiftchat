@@ -147,3 +147,31 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Cloudflare local development state
+.wrangler/
+**/.wrangler/
+
+# Cloudflare secrets
+.dev.vars
+.dev.vars.*
+**/.dev.vars
+**/.dev.vars.*
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Test artifacts
+playwright-report/
+test-results/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE settings
+.idea/
